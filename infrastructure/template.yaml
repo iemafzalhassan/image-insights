@@ -1,0 +1,199 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  ImageInsights - A serverless image analysis application
+
+Parameters:
+  Stage:
+    Type: String
+    Default: dev
+    Description: Deployment stage (dev, test, prod)
+    AllowedValues:
+      - dev
+      - test
+      - prod
+  BucketName:
+    Type: String
+    Default: image-insights-uploads
+    Description: Name of the S3 bucket for image uploads
+
+Globals:
+  Function:
+    Timeout: 30
+    Runtime: nodejs18.x
+    MemorySize: 256
+    Environment:
+      Variables:
+        STAGE: !Ref Stage
+        IMAGES_TABLE: !Ref ImagesTable
+        UPLOAD_BUCKET: !Ref BucketName
+
+Resources:
+  # DynamoDB table for storing image analysis results
+  ImagesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: imageId
+          AttributeType: S
+        - AttributeName: userId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: imageId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: UserIdIndex
+          KeySchema:
+            - AttributeName: userId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
+  # S3 Bucket for image uploads
+  UploadBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref BucketName
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders:
+              - '*'
+            AllowedMethods:
+              - GET
+              - PUT
+              - POST
+              - DELETE
+              - HEAD
+            AllowedOrigins:
+              - '*'
+            MaxAge: 3000
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: s3:ObjectCreated:*
+            Function: !GetAtt ProcessImageFunction.Arn
+
+  # API Gateway for the application
+  ApiGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: !Ref Stage
+      Cors:
+        AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
+        AllowHeaders: "'Content-Type,Authorization'"
+        AllowOrigin: "'*'"
+
+  # Lambda function to process uploaded images
+  ProcessImageFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend/process-image/
+      Handler: app.handler
+      Policies:
+        - S3ReadPolicy:
+            BucketName: !Ref BucketName
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ImagesTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - rekognition:DetectLabels
+                - rekognition:DetectText
+                - rekognition:DetectFaces
+              Resource: '*'
+
+  # Permission for S3 to invoke Lambda
+  ProcessImagePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt ProcessImageFunction.Arn
+      Principal: s3.amazonaws.com
+      SourceArn: !GetAtt UploadBucket.Arn
+
+  # Lambda function to get image analysis results
+  GetImageFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend/get-image/
+      Handler: app.handler
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref ImagesTable
+        - S3ReadPolicy:
+            BucketName: !Ref BucketName
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /images/{imageId}
+            Method: get
+
+  # Lambda function to list images
+  ListImagesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend/list-images/
+      Handler: app.handler
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref ImagesTable
+        - S3ReadPolicy:
+            BucketName: !Ref BucketName
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /images
+            Method: get
+
+  # Lambda function to search images by content
+  SearchImagesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend/search-images/
+      Handler: app.handler
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref ImagesTable
+        - S3ReadPolicy:
+            BucketName: !Ref BucketName
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /search
+            Method: get
+
+  # Lambda function to generate presigned URLs for uploads
+  GetUploadUrlFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend/get-upload-url/
+      Handler: app.handler
+      Policies:
+        - S3WritePolicy:
+            BucketName: !Ref BucketName
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            RestApiId: !Ref ApiGateway
+            Path: /upload-url
+            Method: get
+
+Outputs:
+  ApiEndpoint:
+    Description: API Gateway endpoint URL
+    Value: !Sub https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${Stage}
+  
+  UploadBucketName:
+    Description: S3 bucket for image uploads
+    Value: !Ref BucketName
+  
+  ImagesTableName:
+    Description: DynamoDB table for image analysis results
+    Value: !Ref ImagesTable

@@ -1,0 +1,65 @@
+# Node.js dependencies
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+package-lock.json
+
+# AWS SAM build artifacts
+.aws-sam/
+samconfig.toml
+packaged.yaml
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE files
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Build directories
+dist/
+build/
+out/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
+
+# AWS credentials
+.aws/
+credentials
+config
+
+# CloudFormation outputs
+cloudformation-outputs.json
+
+# Lambda deployment packages
+*.zip
+
+# Local development files
+local-dev/

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ImageInsights - Serverless Image Analysis</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .image-card {
+            margin-bottom: 20px;
+            transition: transform 0.3s;
+        }
+        .image-card:hover {
+            transform: translateY(-5px);
+        }
+        .image-thumbnail {
+            height: 200px;
+            object-fit: cover;
+        }
+        .label-badge {
+            margin-right: 5px;
+            margin-bottom: 5px;
+        }
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+        }
+        #uploadProgress {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="#">ImageInsights</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#" id="galleryLink">Gallery</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="uploadLink">Upload</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="searchLink">Search</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- User ID Input -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text">User ID</span>
+                    <input type="text" class="form-control" id="userId" placeholder="Enter your user ID">
+                    <button class="btn btn-outline-primary" type="button" id="setUserIdBtn">Set</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gallery View -->
+        <div id="galleryView">
+            <h2>Your Images</h2>
+            <div class="row" id="imageGallery">
+                <div class="loading">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upload View -->
+        <div id="uploadView" style="display: none;">
+            <h2>Upload New Image</h2>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="imageFile" class="form-label">Select Image</label>
+                        <input class="form-control" type="file" id="imageFile" accept="image/*">
+                    </div>
+                    <button class="btn btn-primary" id="uploadBtn">Upload Image</button>
+                    
+                    <div class="mt-3" id="uploadProgress">
+                        <div class="progress">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                        </div>
+                        <p class="mt-2" id="uploadStatus">Uploading...</p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Image Preview</h5>
+                            <img id="imagePreview" class="img-fluid" style="max-height: 300px; display: none;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search View -->
+        <div id="searchView" style="display: none;">
+            <h2>Search Images</h2>
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="searchQuery" placeholder="Search for objects, text, or scenes...">
+                        <button class="btn btn-primary" type="button" id="searchBtn">Search</button>
+                    </div>
+                </div>
+            </div>
+            <div class="row" id="searchResults">
+                <!-- Search results will be displayed here -->
+            </div>
+        </div>
+
+        <!-- Image Detail Modal -->
+        <div class="modal fade" id="imageDetailModal" tabindex="-1">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Image Analysis</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <img id="modalImage" class="img-fluid" src="">
+                            </div>
+                            <div class="col-md-6">
+                                <ul class="nav nav-tabs" id="analysisTabs">
+                                    <li class="nav-item">
+                                        <a class="nav-link active" data-bs-toggle="tab" href="#labelsTab">Labels</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" data-bs-toggle="tab" href="#textTab">Text</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" data-bs-toggle="tab" href="#facesTab">Faces</a>
+                                    </li>
+                                </ul>
+                                <div class="tab-content mt-3">
+                                    <div class="tab-pane fade show active" id="labelsTab">
+                                        <h5>Detected Objects and Scenes</h5>
+                                        <div id="labelsList"></div>
+                                    </div>
+                                    <div class="tab-pane fade" id="textTab">
+                                        <h5>Detected Text</h5>
+                                        <div id="textList"></div>
+                                    </div>
+                                    <div class="tab-pane fade" id="facesTab">
+                                        <h5>Detected Faces</h5>
+                                        <div id="facesList"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

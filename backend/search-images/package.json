@@ -1,0 +1,14 @@
+{
+  "name": "search-images",
+  "version": "1.0.0",
+  "description": "Lambda function to search images by content",
+  "main": "app.js",
+  "dependencies": {
+    "aws-sdk": "^2.1048.0"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "MIT"
+}

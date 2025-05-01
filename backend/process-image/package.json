@@ -1,0 +1,15 @@
+{
+  "name": "process-image",
+  "version": "1.0.0",
+  "description": "Lambda function to process uploaded images with Rekognition",
+  "main": "app.js",
+  "dependencies": {
+    "aws-sdk": "^2.1048.0",
+    "uuid": "^8.3.2"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "MIT"
+}
